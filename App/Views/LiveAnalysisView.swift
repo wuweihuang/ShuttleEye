@@ -168,11 +168,6 @@ struct LiveAnalysisView: View {
     }
 }
 
-// 使 Output 可 fullScreenCover(item:)
-extension AnalysisRunner.Output: Identifiable {
-    var id: ObjectIdentifier { ObjectIdentifier(self) }
-}
-
 // 占位标定（不应被用到；结果页需有效标定）
 extension LiveAnalysisView {
     var placeholderCalibration: ScaleCalibration {

@@ -1,6 +1,7 @@
 import Foundation
 import CoreVideo
 import CoreGraphics
+import ShuttleEyeCore
 
 /// CVPixelBuffer(BGRA) → 灰度帧，多行并发降采样
 ///

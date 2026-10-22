@@ -1,6 +1,7 @@
 import Foundation
 import CoreML
 import CoreGraphics
+import ShuttleEyeCore
 
 /// TrackNet 风格 CoreML 检测器（可选增强，需将 TrackNetV3 权重转换为 CoreML）
 ///
@@ -24,8 +25,8 @@ final class CoreMLShuttleDetector: ShuttlecockDetector {
         model = m
         guard let inputDesc = m.modelDescription.inputDescriptionsByName["input"],
               let constraint = inputDesc.imageConstraint else { return nil }
-        inputWidth = Int(constraint.pixelWidth)
-        inputHeight = Int(constraint.pixelHeight)
+        inputWidth = constraint.pixelsWide
+        inputHeight = constraint.pixelsHigh
     }
 
     func detect(previous: GrayscaleImage?, current: GrayscaleImage) -> [Detection] {
@@ -60,7 +61,7 @@ final class CoreMLShuttleDetector: ShuttlecockDetector {
                 let srcY = min(frame.height - 1, Int(Double(y) * sy))
                 for x in 0..<width {
                     let srcX = min(frame.width - 1, Int(Double(x) * sx))
-                    arr[[0, channel, y, x]] = NSNumber(value: Double(frame.pixels[srcY * frame.width + srcX]) / 255.0)
+                    arr[channel * height * width + y * width + x] = NSNumber(value: Double(frame.pixels[srcY * frame.width + srcX]) / 255.0)
                 }
             }
         }
@@ -93,7 +94,7 @@ final class CoreMLShuttleDetector: ShuttlecockDetector {
             for dx in -1...1 {
                 let x = min(max(x0 + dx, 0), hmW - 1)
                 let y = min(max(y0 + dy, 0), hmH - 1)
-                let w = heatmap[[y, x]].doubleValue
+                let w = heatmap[y * hmW + x].doubleValue
                 sw += w; sx += Double(x) * w; sy += Double(y) * w
             }
         }

@@ -63,6 +63,7 @@ struct AboutView: View {
         }
     }
 
+    @ViewBuilder
     private func link(_ text: String, _ url: String) -> some View {
         if let u = URL(string: url) {
             Link(destination: u) {

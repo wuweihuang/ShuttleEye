@@ -36,7 +36,7 @@ struct CalibrationView: View {
                 }
                 .contentShape(Rectangle())
                 .gesture(SpatialTapGesture().onEnded { value in
-                    let imgPt = imagePoint(from: value.location, rect: rect)
+                    let imgPt = imagePoint(from: value.location, rect)
                     if pointA == nil {
                         pointA = imgPt
                     } else if pointB == nil {

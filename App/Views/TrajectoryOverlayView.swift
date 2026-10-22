@@ -47,12 +47,12 @@ struct TrajectoryOverlayView: View {
                 DragGesture(minimumDistance: 0).onEnded { value in
                     let pt = imagePoint(from: value.location, rect: rect)
                     // 找最近点
-                    var best: (Int, Double)?
+                    var best: (Int, CGFloat)?
                     for (i, p) in points.enumerated() {
                         let d = hypot(p.center.x - pt.x, p.center.y - pt.y)
                         if best == nil || d < best!.1 { best = (i, d) }
                     }
-                    if let b = best, b.1 < Double(rect.width) * 0.03 {
+                    if let b = best, b.1 < rect.width * 0.03 {
                         onToggleRemove(b.0)
                     }
                 }

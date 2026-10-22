@@ -5,7 +5,8 @@ import ShuttleEyeCore
 /// 分析调度器：串联 检测 → 跟踪 → 修复 → 测速 → 物理验证
 final class AnalysisRunner {
 
-    struct Output {
+    struct Output: Identifiable {
+        let id = UUID()
         let track: [TrackPoint]
         let analysis: AnalysisOutput
         let fps: Double

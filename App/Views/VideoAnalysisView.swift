@@ -74,7 +74,7 @@ struct VideoAnalysisView: View {
             .sheet(isPresented: Binding(get: { phase == .calibrating && firstFrameImage != nil },
                                         set: { if !$0 { phase = frames.isEmpty ? .pick : .reading } })) {
                 if let img = firstFrameImage {
-                    CalibrationView { cal in
+                    CalibrationView(image: img) { cal in
                         if let cal {
                             calibration = cal
                             runAnalysis()

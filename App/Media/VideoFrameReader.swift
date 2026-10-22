@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import CoreMedia
+import ShuttleEyeCore
 
 /// 从相册视频文件流式提取帧（不缓存全部帧，控制内存）
 enum VideoFrameReader {
