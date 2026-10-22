@@ -184,6 +184,7 @@
       <div class="row3">
         <label>视频帧率 fps<br><input type="number" id="fpsInput" value="240" min="1" max="2000" step="1"></label>
         <label>最大分析帧数<br><input type="number" id="maxFramesInput" value="600" min="10" max="5000" step="10"></label>
+        <label>检测灵敏度 <span id="sensVal">100</span>%<br><input type="range" id="sensRange" min="50" max="200" value="100" step="10" style="width:110px"></label>
         <button id="detectFpsBtn" class="ghost">自动检测帧率</button>
       </div>
       <div class="row">
@@ -943,6 +944,7 @@ class FrameProcessor {
                          calibration ? calibration.scale : null);
     this.prev = frame;
     this.idx += 1;
+    return dets.length;
   }
   finish() {
     if (this.tracker.points.length >= 2) this.tracks.push(this.tracker.points);
@@ -1105,6 +1107,9 @@ window.__selftest = function () {
   const clearCalBtn = $("clearCalBtn");
   const fpsInput = $("fpsInput");
   const maxFramesInput = $("maxFramesInput");
+  const sensRange = $("sensRange");
+  const sensVal = $("sensVal");
+  if (sensRange) sensRange.addEventListener("input", function () { sensVal.textContent = sensRange.value; });
   const detectFpsBtn = $("detectFpsBtn");
   const startBtn = $("startBtn");
   const cancelBtn = $("cancelBtn");
@@ -1198,6 +1203,10 @@ window.__selftest = function () {
     startBtn.disabled = false;
     drawCalibration();
     setStatus("已就绪。请先在上方首帧中标定场地线段（可选但建议），再开始分析。");
+    // 自动检测帧率，避免 240 默认值与实际不符导致重复帧
+    if ("requestVideoFrameCallback" in HTMLVideoElement.prototype && detectFpsBtn && !detectFpsBtn.disabled) {
+      try { detectFpsBtn.click(); } catch (e) { /* 忽略 */ }
+    }
   });
 
   video.addEventListener("error", function () {
@@ -1361,9 +1370,12 @@ window.__selftest = function () {
       const step = Math.max(1, Math.ceil(Math.max(vw, vh) / 960));
       const dw = Math.floor(vw / step), dh = Math.floor(vh / step);
       const work = makeWorkCanvas(dw, dh);
-      const processor = new FrameProcessor(new ClassicalMotionDetector());
+      const sens = sensRange ? parseInt(sensRange.value, 10) : 100;
+      const detectorCfg = sens !== 100 ? { baseThreshold: Math.max(10, Math.round(26 * 100 / sens)) } : null;
+      const processor = new FrameProcessor(new ClassicalMotionDetector(detectorCfg));
       const duration = video.duration || 0;
-      let processed = 0;
+      let processed = 0, detFrames = 0, detTotal = 0, dupFrames = 0, darkFirst = false;
+      let prevGray = null;
 
       for (let i = 0; i < maxFrames; i++) {
         const t = i / fps;
@@ -1371,8 +1383,25 @@ window.__selftest = function () {
         await seekTo(t);
         if (state.cancelRequested) break;
         const gray = grabGray(work, dw, dh);
-        processor.process(gray, t, step, vw, useCal);
+        if (i === 0) {
+          let bsum = 0;
+          for (let k = 0; k < gray.pixels.length; k++) bsum += gray.pixels[k];
+          darkFirst = (bsum / gray.pixels.length) < 8;
+        }
+        if (prevGray && gray.pixels.length === prevGray.pixels.length) {
+          let ds = 0;
+          for (let k = 0; k < gray.pixels.length; k++) ds += Math.abs(gray.pixels[k] - prevGray.pixels[k]);
+          if (ds / gray.pixels.length < 0.5) dupFrames++;
+        }
+        prevGray = gray;
+        const nd = processor.process(gray, t, step, vw, useCal);
+        if (nd > 0) { detFrames++; detTotal += nd; }
         processed = i + 1;
+        if (i >= 24 && dupFrames / (i + 1) > 0.85) {
+          setStatus("提前中止: 前 " + (i + 1) + " 帧中 " + dupFrames + " 帧为重复帧——帧率填写很可能高于视频实际帧率。" +
+                    "请点击『自动检测帧率』后重试。");
+          break;
+        }
         const prog = duration > 0 ? Math.min(1, t / duration) : 0;
         progressBar.style.width = (prog * 100).toFixed(1) + "%";
         setStatus("分析中… 帧 " + processed + " · t=" + t.toFixed(3) + " s · 候选轨迹 " +
@@ -1383,9 +1412,27 @@ window.__selftest = function () {
       state.tracks = tracks;
 
       progressBar.style.width = "100%";
+      const dupRate = processed > 1 ? (dupFrames / (processed - 1)) : 0;
+      const detRate = processed > 0 ? (detFrames / processed) : 0;
       if (tracks.length === 0) {
-        setStatus("未检测到有效轨迹。请确认: 三脚架固定机位、球在画面内且对比度足够、" +
-                  "帧率填写正确、标定比例合理（速度需落在 5~375 km/h）。");
+        let why;
+        if (processed === 0) {
+          why = "未能读取任何帧——视频可能未被浏览器解码。iPhone HEVC 视频请改为 设置→相机→格式→『兼容性最佳』后重拍或导出，或转码为 H.264 mp4。";
+        } else if (darkFirst && detFrames === 0) {
+          why = "首帧接近全黑——视频解码失败或镜头被遮挡。请改用 H.264 mp4（iPhone: 相机格式选『兼容性最佳』）。";
+        } else if (processed > 1 && dupRate > 0.6) {
+          why = dupRate >= 0.98
+            ? "全部帧均为重复帧——帧率填写远高于视频实际帧率（画面完全静止）。请点击『自动检测帧率』或把帧率改为 30/60 后重试。"
+            : "约 " + Math.round(dupRate * 100) + "% 的帧为重复帧——帧率填写高于视频实际帧率，相邻抽帧相同导致帧差为零。请点击『自动检测帧率』或调低帧率后重试。";
+        } else if (detFrames === 0) {
+          why = "处理 " + processed + " 帧但无任何运动目标检出（帧差低于阈值）。建议: ①调高『检测灵敏度』重试 ②确认球在画面内且与背景对比度足够 ③检查画面是否过曝/欠曝。";
+        } else {
+          why = detFrames + " 帧检出运动目标（共 " + detTotal + " 个）但未形成有效轨迹——多为背景运动干扰（人影/机位移动）。建议: ①调低『检测灵敏度』 ②确认三脚架固定 ③截取击球前后更短的片段重试。";
+        }
+        setStatus("未检测到有效轨迹。诊断: " + why +
+                  " [已处理 " + processed + " 帧 · 重复帧 " + Math.round(dupRate * 100) + "% · 检出帧 " +
+                  Math.round(detRate * 100) + "%]");
+        console.log("[ShuttleEye 诊断]", { processed: processed, dupRate: dupRate, detFrames: detFrames, detTotal: detTotal, tracks: tracks.length });
         renderResults();
       } else {
         const best = AnalysisPipeline.bestAnalysis(tracks, vw, useCal);
