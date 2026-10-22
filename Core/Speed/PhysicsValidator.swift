@@ -87,8 +87,8 @@ public enum PhysicsValidator {
         if fit.k > 0 {
             let peak = v.max() ?? 0
             if peak > 0 {
-                // dv/dx = -k·v 的闭式解：v(x) = 1/(1/v₀ + k·x)
-                let vAt = 1 / (1 / peak + fit.k * config.radarDistanceMeters)
+                // dv/dx = -k·v 的闭式解：v(x) = v₀·e^(-k·x)
+                let vAt = peak * exp(-fit.k * config.radarDistanceMeters)
                 radar = vAt * 3.6
             }
         }
@@ -109,7 +109,8 @@ public enum PhysicsValidator {
 
     /// 闭式解：飞行 x 米后的速度（v0 单位 m/s）
     public static func speedAfter(distanceMeters x: Double, initialSpeed v0: Double, dragCoeffK k: Double) -> Double {
-        1 / (1 / v0 + k * x)
+        // dv/dt = -k·v² → dv/dx = -k·v → v(x) = v0·e^(-k·x)
+        v0 * exp(-k * x)
     }
 
     // MARK: - 内部

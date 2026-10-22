@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShuttleEye · 羽毛球鹰眼测速（Windows 单文件版）</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel2: #1c2330;
+    --border: #2a3140;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --blue: #58a6ff;
+    --red: #f85149;
+    --gold: #d29922;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  header {
+    padding: 18px 24px 12px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #11161f, #0d1117);
+  }
+  header .brand { font-size: 20px; font-weight: 700; letter-spacing: .5px; }
+  header .brand .tag {
+    font-size: 12px; font-weight: 500; color: var(--green);
+    border: 1px solid var(--green); border-radius: 999px; padding: 1px 10px; margin-left: 10px;
+    vertical-align: 2px;
+  }
+  header .sub { color: var(--muted); margin-top: 4px; font-size: 13px; }
+  main {
+    display: grid;
+    grid-template-columns: minmax(430px, 1fr) minmax(460px, 1.15fr);
+    gap: 16px;
+    padding: 16px 24px;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  }
+  .card h2 {
+    margin: 0 0 10px; font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .stepnum {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 6px;
+    background: var(--panel2); color: var(--blue);
+    border: 1px solid var(--border); font-size: 12px;
+  }
+  canvas.view {
+    width: 100%; height: auto; display: block;
+    background: #000; border-radius: 8px; border: 1px solid var(--border);
+    cursor: crosshair; touch-action: manipulation;
+  }
+  canvas#chartCanvas { cursor: default; background: var(--panel2); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .row3 { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+  label { color: var(--muted); font-size: 13px; }
+  input[type="number"], input[type="file"], select {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 10px; font-size: 13px; outline: none;
+  }
+  input[type="number"] { width: 92px; }
+  input:focus, select:focus { border-color: var(--blue); }
+  button {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 16px; font-size: 13px; cursor: pointer;
+    transition: filter .12s, transform .05s;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.18); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: #1f6feb33; border-color: #1f6feb; color: #9ecbff; font-weight: 600; }
+  button.danger { border-color: var(--red); color: #ffb3ad; }
+  button.ghost { background: transparent; }
+  .muted { color: var(--muted); }
+  .hint { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  .progress {
+    height: 10px; border-radius: 999px; background: var(--panel2);
+    border: 1px solid var(--border); overflow: hidden; margin-top: 12px;
+  }
+  .progress > div {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--blue), var(--green));
+    transition: width .15s;
+  }
+  #statsGrid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px; margin-top: 12px;
+  }
+  .stat {
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 12px;
+  }
+  .stat .k { color: var(--muted); font-size: 12px; }
+  .stat .v { font-size: 19px; font-weight: 700; margin-top: 2px; }
+  .stat .v small { font-size: 12px; font-weight: 400; color: var(--muted); }
+  .v.good { color: var(--green); }
+  .v.warn { color: var(--gold); }
+  .v.bad { color: var(--red); }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+  }
+  .badge.ok { color: #0d1117; background: var(--green); }
+  .badge.no { color: #0d1117; background: var(--red); }
+  .badge.mid { color: #0d1117; background: var(--gold); }
+  #physicsBox { margin-top: 12px; }
+  #physicsBox .line {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 4px 2px; border-bottom: 1px dashed var(--border); font-size: 13px;
+  }
+  #physicsBox .line:last-child { border-bottom: none; }
+  #physicsBox .line .k { color: var(--muted); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  pre.log {
+    background: #0a0e14; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; color: #9ecbff;
+    overflow-x: auto; white-space: pre-wrap; margin: 10px 0 0;
+  }
+  .usage ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); }
+  .usage li { margin: 3px 0; }
+  .usage b { color: var(--text); font-weight: 600; }
+  footer {
+    text-align: center; color: var(--muted); font-size: 12px;
+    padding: 14px 0 22px; border-top: 1px solid var(--border); margin-top: 8px;
+  }
+  #videoProxy { position: absolute; opacity: 0; pointer-events: none; width: 2px; height: 2px; left: -10px; top: -10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">🏸 ShuttleEye <span class="tag">Windows 单文件离线版</span></div>
+  <div class="sub">羽毛球鹰眼测速 —— 帧差检测 → 复合评分卡尔曼跟踪 → 轨迹修复（中值剔除 + Catmull-Rom 插值）→ 分段测速 → 空气阻力物理验证</div>
+</header>
+
+<main>
+  <!-- 左列：输入与分析 -->
+  <section class="col">
+    <div class="card">
+      <h2><span class="stepnum">1</span> 选择本地视频</h2>
+      <input type="file" id="fileInput" accept="video/mp4,video/quicktime,video/x-m4v,video/webm,video/*">
+      <div id="videoInfo" class="hint">未加载视频。支持 mp4 / mov（需浏览器可解码），建议先剪辑出包含一次击球的 2~4 秒片段。</div>
+      <video id="videoProxy" muted playsinline preload="auto"></video>
+    </div>
+
+    <div class="card">
+      <h2><span class="stepnum">2</span> 首帧标定</h2>
+      <div class="row3">
+        <label>场地线段预设<br>
+          <select id="presetSelect"></select>
+        </label>
+        <button id="clearCalBtn" class="ghost">清除标定点</button>
+      </div>
+      <canvas id="calCanvas" class="view" style="margin-top:10px"></canvas>
+      <div class="hint">在首帧上，沿一条<b>与成像平面平行、且与击球点等距</b>的已知长度场地线段（如双打边线），两端各点击一次。</div>
+      <div id="calInfo" class="hint">尚未选取标定点（0/2）</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="stepnum">3</span> 逐帧分析</h2>
+      <div class="row3">
+        <label>视频帧率 fps<br><input type="number" id="fpsInput" value="240" min="1" max="2000" step="1"></label>
+        <label>最大分析帧数<br><input type="number" id="maxFramesInput" value="600" min="10" max="5000" step="10"></label>
+        <button id="detectFpsBtn" class="ghost">自动检测帧率</button>
+      </div>
+      <div class="row">
+        <button id="startBtn" class="primary" disabled>开始分析</button>
+        <button id="cancelBtn" class="danger" disabled>取消</button>
+      </div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <div id="statusText" class="hint">等待开始……分析在后台分批进行，不会卡住页面。</div>
+    </div>
+  </section>
+
+  <!-- 右列：结果 -->
+  <section class="col">
+    <div class="card">
+      <h2><span class="stepnum">4</span> 轨迹叠加与测速结果</h2>
+      <canvas id="resultCanvas" class="view"></canvas>
+      <div class="legend">
+        <span><i style="background:#22c55e"></i>实测点</span>
+        <span><i style="background:#9ca3af"></i>插值点</span>
+        <span><i style="background:#ef4444"></i>已剔除（点击轨迹附近实测点可剔除/恢复并自动重算）</span>
+        <span><i style="background:linear-gradient(90deg,#3b82f6,#ef4444)"></i>线段颜色 = 速度渐变（蓝慢 → 红快）</span>
+        <span><i style="background:#d29922"></i>标定线段</span>
+      </div>
+      <div id="statsGrid"></div>
+      <div id="physicsBox"></div>
+      <canvas id="chartCanvas" class="view" style="margin-top:14px"></canvas>
+      <div class="row">
+        <button id="csvBtn" class="primary" disabled>导出 CSV</button>
+        <button id="resetPtsBtn" class="ghost" disabled>恢复全部剔除点</button>
+        <button id="selftestBtn" class="ghost">运行自检（合成弹道）</button>
+      </div>
+      <pre id="selftestLog" class="log" hidden></pre>
+    </div>
+
+    <div class="card usage">
+      <h2><span class="stepnum">?</span> 使用说明（拍摄建议）</h2>
+      <ul>
+        <li><b>侧机位</b>：相机置于场地侧面，镜头光轴与球的飞行平面垂直，覆盖击球点至落点区域。</li>
+        <li><b>三脚架</b>：必须固定机位。帧差检测假设背景静止，机位抖动会引入全画面噪声导致误检。</li>
+        <li><b>建议 240fps</b>（至少 120fps）高帧率录制，快门速度 ≥ 1/1000s；高帧率下羽毛球呈亮白色小斑点/短拖影，检测最可靠。</li>
+        <li><b>标定</b>：选取与成像平面平行、与击球点等距的场地线段（双打边线 6.10m、单打边线 5.18m、前发球线距网 1.98m 等预设）。</li>
+        <li><b>结果交互</b>：点击轨迹附近的绿色实测点可剔除异常点并自动重算；再次点击已剔除点可恢复。黄色圆环标记峰值段。</li>
+        <li>所有计算均在本地浏览器完成，视频<b>不会上传</b>；关闭页面即销毁全部数据。</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>ShuttleEye Windows 版 · 核心算法忠实移植自 ShuttleEye iOS (Swift) 的 Core 模块 · 纯前端离线运行</footer>
+
+<!-- ============================================================
+     脚本区 1：核心算法（与 Core/*.swift 逐一对应、语义一致）
+     Detection.swift / ClassicalMotionDetector.swift / KalmanFilter2D.swift /
+     TrajectoryTracker.swift / TrackPoint.swift / TrajectoryRectifier.swift /
+     SpeedCalculator.swift / PhysicsValidator.swift / ScaleCalibration.swift /
+     AnalysisPipeline.swift（另含 App/Pipeline/AnalysisRunner.swift 的 FrameProcessor）
+     ============================================================ -->
+<script>
+"use strict";
+
+/* ---------- Detection.swift：轨迹点 / 检测结果 / 灰度帧 ---------- */
+
+/// 轨迹点（坐标均为原始帧像素坐标）
+function TrackPoint(frameIndex, time, center, confidence, bboxSize, blurLength, isInterpolated) {
+  return {
+    frameIndex: frameIndex,
+    time: time,                     // 秒（帧的 PTS，非帧序号，避免变帧率误差）
+    center: { x: center.x, y: center.y },
+    confidence: confidence,
+    bboxSize: { width: bboxSize.width, height: bboxSize.height },
+    blurLength: blurLength || 0,    // 沿运动方向的模糊拖影长度估计（px）
+    isInterpolated: !!isInterpolated // 由轨迹修复插值补全的点（非实测）
+  };
+}
+
+/// 灰度帧 { width, height, pixels: Uint8Array }
+
+/* ---------- ClassicalMotionDetector.swift：经典 CV 运动检测器 ---------- */
+/* 原理：相邻帧差分 → 自适应阈值（mean + 3σ）→ 连通域提取（BFS）→
+   面积/尺寸过滤 → 亮度加权亚像素质心 */
+class ClassicalMotionDetector {
+  static get defaults() {
+    return {
+      baseThreshold: 26,          // 差分幅度下限（8-bit 灰度）
+      sigmaScale: 3.0,            // 自适应阈值系数：thr = max(base, mean + 3σ)
+      minArea: 3,
+      maxArea: 4000,
+      maxDimensionFraction: 0.08, // 连通域最大边长占帧宽比例（排除人影等大块运动）
+      maxBlobs: 48
+    };
+  }
+  constructor(config) {
+    this.config = Object.assign({}, ClassicalMotionDetector.defaults, config || {});
+  }
+  detect(previous, current) {
+    if (!previous ||
+        previous.width !== current.width ||
+        previous.height !== current.height ||
+        previous.pixels.length !== current.pixels.length) return [];
+
+    const w = current.width, h = current.height, n = w * h;
+
+    // ---- 帧差分 + 统计 ----
+    const diff = new Uint8Array(n);
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      const d = Math.abs(current.pixels[i] - previous.pixels[i]);
+      diff[i] = d;
+      sum += d;
+    }
+    const mean = sum / n;
+    let varSum = 0;
+    for (let i = 0; i < n; i++) {
+      const d = diff[i];
+      varSum += (d - mean) * (d - mean);
+    }
+    const std = Math.sqrt(varSum / n);
+    const thr = Math.max(this.config.baseThreshold, mean + this.config.sigmaScale * std);
+    const thrI = Math.trunc(thr);
+
+    // ---- 连通域提取（BFS，避免递归栈溢出）----
+    const visited = new Uint8Array(n);
+    const stack = [];
+    const results = [];
+    const maxDim = w * this.config.maxDimensionFraction;
+
+    for (let start = 0; start < n; start++) {
+      if (visited[start] || diff[start] <= thrI) continue;
+      visited[start] = 1;
+      stack.length = 0;
+      stack.push(start);
+
+      let area = 0, sumX = 0, sumY = 0, sumW = 0;
+      let minX = w, maxX = 0, minY = h, maxY = 0;
+
+      while (stack.length > 0) {
+        const idx = stack.pop();
+        const x = idx % w, y = (idx - (idx % w)) / w;
+        const v = diff[idx];
+        area++;
+        sumX += x * v; sumY += y * v; sumW += v;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+
+        // 8 邻域
+        const yLo = y > 0 ? y - 1 : 0;
+        const yHi = y < h - 1 ? y + 1 : h - 1;
+        const xLo = x > 0 ? x - 1 : 0;
+        const xHi = x < w - 1 ? x + 1 : w - 1;
+        for (let ny = yLo; ny <= yHi; ny++) {
+          const rowBase = ny * w;
+          for (let nx = xLo; nx <= xHi; nx++) {
+            const nIdx = rowBase + nx;
+            if (!visited[nIdx] && diff[nIdx] > thrI) {
+              visited[nIdx] = 1;
+              stack.push(nIdx);
+            }
+          }
+        }
+      }
+
+      // ---- 过滤 ----
+      if (area < this.config.minArea || area > this.config.maxArea) continue;
+      const bw = maxX - minX + 1, bh = maxY - minY + 1;
+      if (Math.max(bw, bh) > maxDim) continue;
+      if (!(sumW > 0)) continue;
+
+      // 亮度加权质心（亚像素）
+      const cx = sumX / sumW, cy = sumY / sumW;
+      // 拖影估计：长轴 - 短轴（圆形斑点为 0，运动拖影为正）
+      const blur = Math.max(bw, bh) - Math.min(bw, bh);
+      // 置信度：归一化差分能量（经验映射）
+      const energy = sumW / area;
+      const confidence = Math.min(1.0, energy / 160.0);
+
+      results.push({
+        center: { x: cx, y: cy },
+        confidence: confidence,
+        bboxSize: { width: bw, height: bh },
+        blurLength: blur
+      });
+      if (results.length >= this.config.maxBlobs) break;
+    }
+    return results;
+  }
+}
+
+/* ---------- KalmanFilter2D.swift：恒速模型二维卡尔曼滤波器 ---------- */
+/* 状态向量 [x, y, vx, vy]；过程噪声取较大加速度标准差以适应击球后 ~200g 的剧烈减速 */
+class KalmanFilter2D {
+  constructor(at, accelStd, measStd) {
+    this.accelStd = (accelStd === undefined) ? 4.0e5 : accelStd; // 过程噪声：加速度标准差 (px/s²)
+    this.measStd = (measStd === undefined) ? 1.8 : measStd;      // 量测噪声 (px)
+    this.x = [at.x, at.y, 0, 0];
+    this.P = KalmanFilter2D.identity();
+    this.P[0][0] = 64; this.P[1][1] = 64;
+    this.P[2][2] = this.accelStd * this.accelStd * 0.01;
+    this.P[3][3] = this.accelStd * this.accelStd * 0.01;
+  }
+  get position() { return { x: this.x[0], y: this.x[1] }; }
+  get velocity() { return { x: this.x[2], y: this.x[3] }; }
+  get speedPxPerSec() { return Math.hypot(this.x[2], this.x[3]); }
+  get positionStd() { return Math.sqrt(Math.max(0, (this.P[0][0] + this.P[1][1]) / 2)); }
+
+  /// 用前两个实测点直接种入速度（与 Swift 版逐行对应）
+  seedVelocity(from, dt) {
+    if (!(dt > 0)) return;
+    this.x[2] = (from.x - this.x[0]) / dt;
+    this.x[3] = (from.y - this.x[1]) / dt;
+    this.P[2][2] = this.accelStd * this.accelStd * 0.01;
+    this.P[3][3] = this.accelStd * this.accelStd * 0.01;
+  }
+  predict(dt) {
+    this.x = [this.x[0] + this.x[2] * dt, this.x[1] + this.x[3] * dt, this.x[2], this.x[3]];
+    const F = KalmanFilter2D.identity();
+    F[0][2] = dt;
+    F[1][3] = dt;
+    this.P = KalmanFilter2D.mul(KalmanFilter2D.mul(F, this.P), KalmanFilter2D.transpose(F));
+    // Q：恒加速白噪声模型
+    const q2 = this.accelStd * this.accelStd;
+    const dt2 = dt * dt, dt3 = dt2 * dt, dt4 = dt2 * dt2;
+    const Q = [
+      [q2 * dt4 / 4, 0,            q2 * dt3 / 2, 0],
+      [0,            q2 * dt4 / 4, 0,            q2 * dt3 / 2],
+      [q2 * dt3 / 2, 0,            q2 * dt2,     0],
+      [0,            q2 * dt3 / 2, 0,            q2 * dt2]
+    ];
+    this.P = KalmanFilter2D.add(this.P, Q);
+  }
+  update(measured) {
+    // S = H P Hᵀ + R（2x2），H 取前两行单位阵
+    const r2 = this.measStd * this.measStd;
+    const P = this.P;
+    const S00 = P[0][0] + r2, S01 = P[0][1], S10 = P[1][0], S11 = P[1][1] + r2;
+    const det = S00 * S11 - S01 * S10;
+    if (!(Math.abs(det) > 1e-12)) return;
+    const i00 = S11 / det, i01 = -S01 / det, i10 = -S10 / det, i11 = S00 / det;
+
+    // K = P Hᵀ S⁻¹（4x2），P Hᵀ 即 P 的前两列
+    const K = [[0, 0], [0, 0], [0, 0], [0, 0]];
+    for (let i = 0; i < 4; i++) {
+      K[i][0] = P[i][0] * i00 + P[i][1] * i10;
+      K[i][1] = P[i][0] * i01 + P[i][1] * i11;
+    }
+    const y0 = measured.x - this.x[0], y1 = measured.y - this.x[1];
+    for (let i = 0; i < 4; i++) this.x[i] += K[i][0] * y0 + K[i][1] * y1;
+
+    // P = (I - K H) P
+    const IKH = KalmanFilter2D.identity();
+    for (let i = 0; i < 4; i++) {
+      IKH[i][0] -= K[i][0];
+      IKH[i][1] -= K[i][1];
+    }
+    this.P = KalmanFilter2D.mul(IKH, P);
+  }
+  step(dt, measured) {
+    this.predict(dt);
+    this.update(measured);
+  }
+  static identity() {
+    const m = [];
+    for (let i = 0; i < 4; i++) { const row = [0, 0, 0, 0]; row[i] = 1; m.push(row); }
+    return m;
+  }
+  static mul(a, b) {
+    const n = a.length, k = a[0].length, m = b[0].length;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const row = new Array(m).fill(0);
+      for (let p = 0; p < k; p++) {
+        const aip = a[i][p];
+        if (aip === 0) continue;
+        for (let j = 0; j < m; j++) row[j] += aip * b[p][j];
+      }
+      out.push(row);
+    }
+    return out;
+  }
+  static add(a, b) {
+    const out = [];
+    for (let i = 0; i < a.length; i++) {
+      const row = [];
+      for (let j = 0; j < a[i].length; j++) row.push(a[i][j] + b[i][j]);
+      out.push(row);
+    }
+    return out;
+  }
+  static transpose(a) {
+    const out = [];
+    for (let i = 0; i < a.length; i++) {
+      const row = [];
+      for (let j = 0; j < a.length; j++) row.push(a[j][i]);
+      out.push(row);
+    }
+    return out;
+  }
+}
+
+/* ---------- TrajectoryTracker.swift：复合评分 tracking-by-detection ---------- */
+/* 1. 复合评分 S = 0.3·C_det + 0.7·P_kalman（时间平滑优先于检测置信度）
+   2. 启发式速度边界：5 ~ 375 km/h 之外的检测直接剔除
+   3. 自适应门限 gate = max(W/4, 2.5·|v̂|·dt)（低帧率下球单帧位移可达数百像素）
+   4. 丢失帧进入 coast 模式，超过 maxCoastFrames 判定本次击球结束 */
+class TrajectoryTracker {
+  static get defaults() {
+    return {
+      confidenceWeight: 0.3,
+      proximityWeight: 0.7,
+      minDetectionConfidence: 0.1,
+      gateFrameFraction: 0.25,   // 论文默认门限：帧宽的 1/4
+      minSpeedKmh: 5.0,
+      maxSpeedKmh: 375.0,
+      maxCoastFrames: 5,
+      accelStd: 4.0e5,
+      measurementStd: 1.8
+    };
+  }
+  constructor(config) {
+    this.config = Object.assign({}, TrajectoryTracker.defaults, config || {});
+    this.points = [];
+    this.isFinished = false;
+    this.kalman = null;
+    this.lastPoint = null;
+    this.coastCount = 0;
+  }
+  reset() {
+    this.points = [];
+    this.kalman = null;
+    this.lastPoint = null;
+    this.coastCount = 0;
+    this.isFinished = false;
+  }
+  /// 处理一帧。返回被采纳的轨迹点（无采纳则返回 null）。
+  process(frameIndex, time, detections, frameWidth, scaleMetersPerPixel) {
+    if (this.isFinished) return null;
+
+    // ---- 未初始化：取置信度最高的检测作为轨迹起点（并列取首个，同 Swift max(by:)) ----
+    if (!this.kalman || !this.lastPoint) {
+      let best = null;
+      for (const d of detections) {
+        if (best === null || d.confidence > best.confidence) best = d;
+      }
+      if (best === null) return null;
+      const p = TrackPoint(frameIndex, time, best.center, best.confidence, best.bboxSize, best.blurLength);
+      this.kalman = new KalmanFilter2D(best.center, this.config.accelStd, this.config.measurementStd);
+      this.points.push(p);
+      this.lastPoint = p;
+      this.coastCount = 0;
+      return p;
+    }
+
+    const dt = time - this.lastPoint.time;
+    if (!(dt > 0)) return null;
+    this.kalman.predict(dt);
+
+    // ---- 自适应门限 ----
+    const predicted = this.kalman.position;
+    const predictedStep = this.kalman.speedPxPerSec * dt;
+    const gate = Math.max(this.config.gateFrameFraction * frameWidth, predictedStep * 2.5);
+
+    // ---- 复合评分选优 ----
+    let chosen = null, chosenScore = 0;
+    for (const d of detections) {
+      if (d.confidence < this.config.minDetectionConfidence) continue;
+      const dist = Math.hypot(d.center.x - predicted.x, d.center.y - predicted.y);
+      if (dist > gate) continue;
+      const proximity = Math.max(0, 1 - dist / Math.max(gate, 1));
+      const score = this.config.confidenceWeight * d.confidence + this.config.proximityWeight * proximity;
+      if (chosen === null || score > chosenScore) { chosen = d; chosenScore = score; }
+    }
+
+    if (chosen === null) {
+      this.coastCount++;
+      if (this.coastCount > this.config.maxCoastFrames) this.isFinished = true;
+      return null;
+    }
+
+    // ---- 启发式速度边界（heuristic bounding）----
+    if (scaleMetersPerPixel !== null && scaleMetersPerPixel !== undefined) {
+      const d = Math.hypot(chosen.center.x - this.lastPoint.center.x,
+                           chosen.center.y - this.lastPoint.center.y);
+      const kmh = d / dt * scaleMetersPerPixel * 3.6;
+      if (kmh < this.config.minSpeedKmh || kmh > this.config.maxSpeedKmh) {
+        this.coastCount++;
+        if (this.coastCount > this.config.maxCoastFrames) this.isFinished = true;
+        return null;
+      }
+    }
+
+    // ---- 更新滤波器（第二次测量时种入速度）----
+    if (this.points.length === 1) {
+      this.kalman.seedVelocity(this.lastPoint.center, dt);
+    }
+    this.kalman.update(chosen.center);
+
+    const p = TrackPoint(frameIndex, time, chosen.center, chosen.confidence, chosen.bboxSize, chosen.blurLength);
+    this.points.push(p);
+    this.lastPoint = p;
+    this.coastCount = 0;
+    return p;
+  }
+}
+
+/* ---------- TrajectoryRectifier.swift：轨迹修复 ---------- */
+/* 1. 滑窗中值离群点剔除：帧间位移突变的孤立误检被移除
+   2. 间隙插值：短时丢失（≤ maxGapFrames）用 Catmull-Rom 样条补全，
+      实测点不做平滑（避免抹平击球瞬间的速度峰值） */
+const TrajectoryRectifier = {
+  removeOutliers: function (points, frameWidth, window, deviationFraction) {
+    window = (window === undefined) ? 5 : window;
+    deviationFraction = (deviationFraction === undefined) ? 0.08 : deviationFraction;
+    if (points.length < 5) return points;
+    const half = Math.floor(window / 2);
+    const kept = [];
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      const lo = Math.max(0, i - half);
+      const hi = Math.min(points.length - 1, i + half);
+      const xs = [], ys = [];
+      for (let j = lo; j <= hi; j++) {
+        if (j === i) continue;
+        xs.push(points[j].center.x);
+        ys.push(points[j].center.y);
+      }
+      if (xs.length < 2) { kept.push(p); continue; }
+      const mx = TrajectoryRectifier.median(xs), my = TrajectoryRectifier.median(ys);
+      const dev = Math.hypot(p.center.x - mx, p.center.y - my);
+      if (dev <= Math.max(deviationFraction * frameWidth, 2.0)) kept.push(p);
+    }
+    return kept;
+  },
+  fillGaps: function (points, maxGapFrames) {
+    maxGapFrames = (maxGapFrames === undefined) ? 8 : maxGapFrames;
+    if (points.length < 2) return points;
+    const out = [];
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      out.push(p);
+      if (i + 1 >= points.length) break;
+      const nxt = points[i + 1];
+      const gap = nxt.frameIndex - p.frameIndex - 1;
+      if (!(gap > 0 && gap <= maxGapFrames)) continue;
+
+      const p0 = points[Math.max(i - 1, 0)].center;
+      const p1 = p.center;
+      const p2 = nxt.center;
+      const p3 = points[Math.min(i + 2, points.length - 1)].center;
+
+      for (let k = 1; k <= gap; k++) {
+        const s = k / (gap + 1);
+        const c = TrajectoryRectifier.catmullRom(p0, p1, p2, p3, s);
+        const t = p.time + (nxt.time - p.time) * s;
+        out.push(TrackPoint(p.frameIndex + k, t, c, 0, p.bboxSize, 0, true));
+      }
+    }
+    return out;
+  },
+  /// Catmull-Rom 插值（tension = 0.5）
+  catmullRom: function (p0, p1, p2, p3, s) {
+    const s2 = s * s, s3 = s2 * s;
+    const cr = function (a, b, c, d) {
+      return 0.5 * ((2 * b) + (-a + c) * s + (2 * a - 5 * b + 4 * c - d) * s2 + (-a + 3 * b - 3 * c + d) * s3);
+    };
+    return { x: cr(p0.x, p1.x, p2.x, p3.x), y: cr(p0.y, p1.y, p2.y, p3.y) };
+  },
+  median: function (values) {
+    const sorted = values.slice().sort(function (a, b) { return a - b; });
+    const n = sorted.length;
+    if (n === 0) return 0;
+    return (n % 2 === 1) ? sorted[Math.floor(n / 2)] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+  }
+};
+
+/* ---------- SpeedCalculator.swift：运动学测速器 ---------- */
+/* v_{i→i+1} = (Δpixel / Δt) × S_f × 3.6 [km/h]（arXiv:2509.05334 §3.2.3）
+   1. 亚像素质心  2. 运动模糊前缘补偿（质心沿运动方向前移 blurLength/2）
+   3. 不确定度量化：σ_v = √2·σ_px·S_f/dt */
+const SpeedCalculator = {
+  defaults: { sigmaPixel: 1.5, useLeadingEdge: true },
+  compute: function (points, calibration, config) {
+    config = Object.assign({}, SpeedCalculator.defaults, config || {});
+    const scale = calibration.scale;
+    if (!(scale > 0) || points.length < 2) return null;
+
+    // ---- 前缘补偿后的位置 ----
+    const adjusted = [];
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      if (!(config.useLeadingEdge && p.blurLength > 0)) {
+        adjusted.push(p.center);
+        continue;
+      }
+      // 运动方向由邻域位移估计
+      const prev = points[Math.max(i - 1, 0)].center;
+      const next = points[Math.min(i + 1, points.length - 1)].center;
+      let dx = next.x - prev.x, dy = next.y - prev.y;
+      const len = Math.hypot(dx, dy);
+      if (len > 1e-6) { dx = dx / len; dy = dy / len; }
+      else { dx = 1; dy = 0; }
+      adjusted.push({ x: p.center.x + dx * p.blurLength / 2, y: p.center.y + dy * p.blurLength / 2 });
+    }
+
+    // ---- 逐段速度 ----
+    const segments = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      const dt = b.time - a.time;
+      if (!(dt > 0)) continue;
+      const dpx = Math.hypot(adjusted[i + 1].x - adjusted[i].x, adjusted[i + 1].y - adjusted[i].y);
+      const mps = dpx / dt * scale;
+      const unc = Math.sqrt(2) * config.sigmaPixel * scale / dt * 3.6;
+      segments.push({ index: i, t0: a.time, t1: b.time, speedKmh: mps * 3.6, uncertaintyKmh: unc });
+    }
+    if (segments.length === 0) return null;
+
+    // ---- 峰值与平滑峰值 ----
+    let peakIdx = 0;
+    for (let i = 1; i < segments.length; i++) {
+      if (segments[i].speedKmh > segments[peakIdx].speedKmh) peakIdx = i;
+    }
+    const smoothed = [];
+    for (let i = 0; i < segments.length; i++) {
+      const lo = Math.max(0, i - 1), hi = Math.min(segments.length - 1, i + 1);
+      const win = [];
+      for (let j = lo; j <= hi; j++) win.push(segments[j].speedKmh);
+      win.sort(function (a, b) { return a - b; });
+      smoothed.push(win[Math.floor(win.length / 2)]);
+    }
+    let sum = 0;
+    for (let i = 0; i < segments.length; i++) sum += segments[i].speedKmh;
+    const avg = sum / segments.length;
+
+    return {
+      peakKmh: segments[peakIdx].speedKmh,
+      peakUncertaintyKmh: segments[peakIdx].uncertaintyKmh,
+      smoothedPeakKmh: Math.max.apply(null, smoothed),
+      averageKmh: avg,
+      peakSegmentIndex: peakIdx,
+      segments: segments
+    };
+  }
+};
+
+/* ---------- PhysicsValidator.swift：空气阻力物理一致性验证 ---------- */
+/* dv/dt = -k·v²，闭式解 v(t+Δt) = v(t)/(1+k·v(t)·Δt)。
+   1. 反解每段 k_i = (v_i/v_{i+1} − 1)/(v_i·Δt)，取中值得 k̂
+   2. 用 k̂ 前向预测与实测比较 → R² 与最大相对偏差
+   3. R² 高且 k̂ ∈ [0.02, 0.6] /m → 测速通过物理自洽校验
+   4. 雷达枪等效速度 v(距击球点 d 米处)（与 Swift 版 speedAfter 公式完全一致） */
+function fitDragModel(v, dts, config) {
+  // 反解每段 k（仅减速段有效）
+  const ks = [];
+  for (let i = 0; i < v.length - 1; i++) {
+    if (v[i] > v[i + 1] && v[i] > 1) {
+      const k = (v[i] / v[i + 1] - 1) / (v[i] * dts[i]);
+      if (k > config.kMin && k < config.kMax) ks.push(k);
+    }
+  }
+  if (ks.length === 0) return { k: 0, r2: 0, maxDev: 1, suspicious: [], estimateCount: 0 };
+  ks.sort(function (a, b) { return a - b; });
+  const k = ks[Math.floor(ks.length / 2)];
+
+  // 用 k̂ 前向预测
+  const pred = new Array(v.length).fill(null);
+  for (let i = 0; i < v.length - 1; i++) {
+    pred[i + 1] = v[i] / (1 + k * v[i] * dts[i]);
+  }
+  let ssRes = 0, ssTot = 0, maxDev = 0;
+  const suspicious = [];
+  let sum = 0;
+  for (let i = 0; i < v.length; i++) sum += v[i];
+  const mean = sum / v.length;
+  for (let i = 0; i < v.length; i++) {
+    const p = pred[i];
+    if (p === null) continue;
+    ssRes += (v[i] - p) * (v[i] - p);
+    ssTot += (v[i] - mean) * (v[i] - mean);
+    const dev = Math.abs(v[i] - p) / Math.max(v[i], 1e-6);
+    if (dev > maxDev) maxDev = dev;
+    if (dev > config.maxDeviation) suspicious.push(i);
+  }
+  const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+  return { k: k, r2: r2, maxDev: maxDev, suspicious: suspicious, estimateCount: ks.length };
+}
+
+const PhysicsValidator = {
+  defaults: {
+    kMin: 0.02, kMax: 0.6,        // 羽毛球气动系数合理范围（1/m）：k = g/v_term²
+    r2Threshold: 0.85,
+    maxDeviation: 0.35,
+    minSegments: 4,
+    radarDistanceMeters: 4.0      // 雷达枪等效距离（米）
+  },
+  validate: function (points, calibration, config) {
+    config = Object.assign({}, PhysicsValidator.defaults, config || {});
+    const scale = calibration.scale;
+    if (!(scale > 0)) return null;
+
+    // ---- 段速度（仅用实测点，插值点不参与验证）----
+    const v = [], dt = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i], b = points[i + 1];
+      if (a.isInterpolated || b.isInterpolated) continue;
+      const d = Math.hypot(b.center.x - a.center.x, b.center.y - a.center.y);
+      const dtp = b.time - a.time;
+      if (!(dtp > 0) || !(d > 0)) continue;
+      v.push(d / dtp * scale);
+      dt.push(dtp);
+    }
+    if (v.length < config.minSegments) return null;
+
+    // ---- 第一次拟合 ----
+    let fit = fitDragModel(v, dt, config);
+
+    // ---- 鲁棒二次拟合：剔除可疑段相邻的转移后重估 ----
+    if (fit.suspicious.length > 0) {
+      const susp = new Set(fit.suspicious);
+      const v2 = [], dt2 = [];
+      for (let i = 0; i < v.length - 1; i++) {
+        if (!susp.has(i) && !susp.has(i + 1)) { v2.push(v[i]); dt2.push(dt[i]); }
+      }
+      if (v2.length >= config.minSegments) {
+        const refit = fitDragModel(v2, dt2, config);
+        if (refit.r2 > fit.r2) fit = refit;
+      }
+    }
+
+    // ---- 雷达等效速度（与 Swift speedAfter 相同闭式：v(x) = 1/(1/v₀ + k·x)）----
+    let radar = null;
+    if (fit.k > 0) {
+      let peak = 0;
+      for (let i = 0; i < v.length; i++) if (v[i] > peak) peak = v[i];
+      if (peak > 0) {
+        radar = peak * Math.exp(-fit.k * config.radarDistanceMeters) * 3.6;
+      }
+    }
+
+    const consistent = fit.k >= config.kMin && fit.k <= config.kMax
+      && fit.r2 >= config.r2Threshold
+      && fit.maxDev <= config.maxDeviation
+      && fit.estimateCount >= 3;
+
+    return {
+      dragCoeffK: fit.k,
+      r2: fit.r2,
+      maxRelDeviation: fit.maxDev,
+      isConsistent: consistent,
+      suspiciousSegments: fit.suspicious,
+      radarEquivalentKmh: radar,
+      segmentCount: v.length
+    };
+  },
+  /// 闭式解：飞行 x 米后的速度（v0 单位 m/s）—— dv/dt=-k·v² → v(x)=v0·e^(-k·x)
+  speedAfter: function (x, v0, k) {
+    return v0 * Math.exp(-k * x);
+  }
+};
+
+/* ---------- ScaleCalibration.swift：时空标定 ---------- */
+function makeScaleCalibration(pixelA, pixelB, realDistanceMeters) {
+  return {
+    pixelA: { x: pixelA.x, y: pixelA.y },
+    pixelB: { x: pixelB.x, y: pixelB.y },
+    realDistanceMeters: realDistanceMeters,
+    get scale() {
+      const d = Math.hypot(this.pixelB.x - this.pixelA.x, this.pixelB.y - this.pixelA.y);
+      if (!(d > 1e-6)) return 0;
+      return this.realDistanceMeters / d;
+    },
+    get isValid() { const s = this.scale; return s > 0 && s < 0.5; }
+  };
+}
+/// 标准羽毛球场地尺寸预设（单位：米）—— 与 Swift courtPresets 完全一致
+const COURT_PRESETS = [
+  { name: "双打边线全场宽 6.10m", meters: 6.10 },
+  { name: "单打边线全场宽 5.18m", meters: 5.18 },
+  { name: "半场长度（网→底线）6.70m", meters: 6.70 },
+  { name: "前发球线距网 1.98m", meters: 1.98 },
+  { name: "双打后发球线距底线 0.76m", meters: 0.76 },
+  { name: "前场发球线→双打后发球线 5.94m", meters: 5.94 }
+];
+
+/* ---------- AnalysisPipeline.swift：端到端分析管线 ---------- */
+const AnalysisPipeline = {
+  analyze: function (track, frameWidth, calibration, speedConfig, physicsConfig) {
+    // 1. 轨迹修复
+    const rectified = TrajectoryRectifier.fillGaps(
+      TrajectoryRectifier.removeOutliers(track, frameWidth)
+    );
+    // 2. 测速（需标定）
+    let speed = null, physics = null;
+    if (calibration) {
+      speed = SpeedCalculator.compute(rectified, calibration, speedConfig);
+      if (speed !== null) {
+        physics = PhysicsValidator.validate(rectified, calibration, physicsConfig);
+      }
+    }
+    // 3. 质量分级
+    let meanConf = 0;
+    if (track.length > 0) {
+      let s = 0;
+      for (let i = 0; i < track.length; i++) s += track[i].confidence;
+      meanConf = s / track.length;
+    }
+    let quality;
+    if (rectified.length < 6) quality = "insufficient";
+    else if (rectified.length >= 12 && meanConf >= 0.15) quality = "good";
+    else quality = "fair";
+
+    return { rawPoints: track, rectified: rectified, speed: speed, physics: physics, quality: quality };
+  },
+  /// 多段轨迹择优：点数 ≥6 且质量达标中，取平滑峰值最高的一段
+  bestAnalysis: function (tracks, frameWidth, calibration) {
+    let best = null;
+    for (let i = 0; i < tracks.length; i++) {
+      const t = tracks[i];
+      if (t.length < 6) continue;
+      const a = AnalysisPipeline.analyze(t, frameWidth, calibration);
+      if (a.quality === "insufficient") continue;
+      const score = a.speed ? a.speed.smoothedPeakKmh : 0;
+      if (best === null || score > best.score) best = { track: t, analysis: a, score: score };
+    }
+    return best ? { track: best.track, analysis: best.analysis } : null;
+  }
+};
+
+/* ---------- AnalysisRunner.swift（App 层）：流式帧处理器 ---------- */
+/* 内存中只保留检测所需的前一帧；检测坐标 × downscale 映射回原始分辨率坐标系 */
+class FrameProcessor {
+  constructor(detector) {
+    this.detector = detector;
+    this.tracker = new TrajectoryTracker();
+    this.tracks = [];
+    this.prev = null;
+    this.idx = 0;
+  }
+  process(frame, time, downscale, originalWidth, calibration) {
+    let dets = this.detector.detect(this.prev, frame);
+    const ds = downscale;
+    const mapped = [];
+    for (let i = 0; i < dets.length; i++) {
+      const d = dets[i];
+      mapped.push({
+        center: { x: d.center.x * ds, y: d.center.y * ds },
+        confidence: d.confidence,
+        bboxSize: { width: d.bboxSize.width * ds, height: d.bboxSize.height * ds },
+        blurLength: d.blurLength * ds
+      });
+    }
+    if (this.tracker.isFinished) {
+      if (this.tracker.points.length >= 2) this.tracks.push(this.tracker.points);
+      this.tracker = new TrajectoryTracker();
+    }
+    this.tracker.process(this.idx, time, mapped, originalWidth,
+                         calibration ? calibration.scale : null);
+    this.prev = frame;
+    this.idx += 1;
+  }
+  finish() {
+    if (this.tracker.points.length >= 2) this.tracks.push(this.tracker.points);
+    return this.tracks;
+  }
+}
+</script>
+
+<!-- ============================================================
+     脚本区 2：自检入口 window.__selftest
+     构造合成弹道（初速 100 m/s、k=0.15 /m，重力+阻力积分，渲染为
+     带拖影/噪声的合成灰度帧），跑完整管线（检测→跟踪→修复→测速→
+     物理验证），console 输出测得峰值速度与物理验证 R²。
+     ============================================================ -->
+<script>
+"use strict";
+window.__selftest = function () {
+  const W = 640, H = 360;
+  const FPS = 240, DT = 1 / FPS;
+  const V0 = 100.0;            // 初速 100 m/s（= 360 km/h）
+  const K_DRAG = 0.15;         // 气动阻力系数 1/m
+  const G = 9.81;
+  const ANGLE = 6 * Math.PI / 180; // 略向下
+  const M_PER_PX = 0.04;       // 比例尺（合成标定）
+  const MAX_FRAMES = 200;
+
+  // ---- 1. 合成弹道（米制，半隐式欧拉，dv/dt = -k·|v|·v + g，y 向下为正）----
+  const posPx = [];
+  {
+    let p = { x: 2.0, y: 3.6 };                       // 米 → 起点 (50, 90) px
+    let v = { x: V0 * Math.cos(ANGLE), y: V0 * Math.sin(ANGLE) };
+    posPx.push({ x: p.x / M_PER_PX, y: p.y / M_PER_PX });
+    const h = DT / 8;
+    for (let i = 1; i < MAX_FRAMES; i++) {
+      for (let s = 0; s < 8; s++) {
+        const sp = Math.hypot(v.x, v.y);
+        v.x += (-K_DRAG * sp * v.x) * h;
+        v.y += (G - K_DRAG * sp * v.y) * h;
+        p.x += v.x * h;
+        p.y += v.y * h;
+      }
+      if (Math.hypot(v.x, v.y) < 8.0) break;          // 速度过低即停止（> 5 km/h 下限）
+      const px = { x: p.x / M_PER_PX, y: p.y / M_PER_PX };
+      if (px.x < 8 || px.x > W - 8 || px.y < 8 || px.y > H - 8) break;
+      posPx.push(px);
+    }
+  }
+
+  // ---- 2. 渲染合成灰度帧（静态背景 + 逐帧噪声 + 持久余晖层）----
+  // 余晖层每帧衰减到 75% 后叠加亮白头部高斯：帧差仅在球头处产生强斑点（diff≈170），
+  // 旧位置仅剩弱残影（diff≈43→32），保证跟踪器复合评分稳定锁定真实球头。
+  const bgTemplate = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let v = 60 + 20 * Math.sin(x * 0.011) + 15 * Math.cos(y * 0.017);
+      bgTemplate[y * W + x] = v < 0 ? 0 : (v > 255 ? 255 : v);
+    }
+  }
+  const trail = new Uint8Array(W * H);
+  function stampGaussian(g, cx, cy, amp, sigma) {
+    const r = Math.ceil(sigma * 3);
+    const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(W - 1, Math.ceil(cx + r));
+    const y0 = Math.max(0, Math.floor(cy - r)), y1 = Math.min(H - 1, Math.ceil(cy + r));
+    const inv = 1 / (2 * sigma * sigma);
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const dd = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+        const val = g[y * W + x] + amp * Math.exp(-dd * inv);
+        g[y * W + x] = val > 255 ? 255 : val;
+      }
+    }
+  }
+  function renderSyntheticFrame(i) {
+    // 1) 余晖衰减
+    for (let k = 0; k < trail.length; k++) trail[k] = (trail[k] * 0.75) | 0;
+    // 2) 画亮白球头（叠加进余晖层）
+    const head = posPx[i];
+    stampGaussian(trail, head.x, head.y, 170, 1.7);
+    // 3) 合成：背景 + 确定性传感器噪声（±6 灰度，低于检测阈值 26）+ 余晖
+    const g = new Uint8Array(W * H);
+    let seed = (12345 + i * 7919) >>> 0;
+    for (let k = 0; k < g.length; k++) {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      const nz = ((seed >>> 16) % 13) - 6;
+      const val = bgTemplate[k] + nz + trail[k];
+      g[k] = val < 0 ? 0 : (val > 255 ? 255 : val);
+    }
+    return { width: W, height: H, pixels: g };
+  }
+
+  // ---- 3. 跑完整管线：检测 → 跟踪 → 修复 → 测速 → 物理验证 ----
+  // 标定：500 px = 20.0 m → scale = 0.04 m/px（与合成弹道一致）
+  const cal = makeScaleCalibration({ x: 50, y: 340 }, { x: 550, y: 340 }, 20.0);
+  const processor = new FrameProcessor(new ClassicalMotionDetector());
+  for (let i = 0; i < posPx.length; i++) {
+    const gray = renderSyntheticFrame(i);
+    processor.process(gray, i * DT, 1, W, cal);
+  }
+  const tracks = processor.finish();
+  const best = AnalysisPipeline.bestAnalysis(tracks, W, cal);
+
+  // ---- 4. 输出 ----
+  const truthKmh = V0 * 3.6;
+  console.log("%c[ShuttleEye 自检] 合成弹道 → 完整测速管线", "color:#3fb950;font-weight:bold;font-size:13px");
+  console.log("合成参数: v0=" + V0 + " m/s (" + truthKmh.toFixed(1) + " km/h), k=" + K_DRAG +
+              " /m, " + FPS + " fps, " + posPx.length + " 帧, 比例尺 " + M_PER_PX + " m/px");
+  if (!best) {
+    console.warn("自检失败：未得到合格轨迹段。候选轨迹点数: " + tracks.map(function (t) { return t.length; }).join(", "));
+    return { ok: false, tracks: tracks.map(function (t) { return t.length; }) };
+  }
+  const speed = best.analysis.speed, phys = best.analysis.physics;
+  console.log("跟踪结果: 候选轨迹 " + tracks.length + " 段, 最佳段 " + best.track.length +
+              " 点 (质量 " + best.analysis.quality + ")");
+  if (speed) {
+    console.log("测得峰值速度: " + speed.peakKmh.toFixed(1) + " km/h（真值 " + truthKmh.toFixed(1) +
+                " km/h, 偏差 " + (Math.abs(speed.peakKmh - truthKmh) / truthKmh * 100).toFixed(2) +
+                "%), 平滑峰值 " + speed.smoothedPeakKmh.toFixed(1) + " km/h, 平均 " +
+                speed.averageKmh.toFixed(1) + " km/h, 峰值不确定度 ±" + speed.peakUncertaintyKmh.toFixed(1) + " km/h");
+  }
+  if (phys) {
+    console.log("物理验证: 气动系数 k=" + phys.dragCoeffK.toFixed(3) + " /m（真值 " + K_DRAG +
+                "）, R²=" + phys.r2.toFixed(4) + ", 最大相对偏差 " +
+                (phys.maxRelDeviation * 100).toFixed(1) + "%, 雷达等效(4m)=" +
+                (phys.radarEquivalentKmh === null ? "—" : phys.radarEquivalentKmh.toFixed(1) + " km/h") +
+                ", 可疑段 [" + phys.suspiciousSegments.join(",") + "], 物理自洽: " +
+                (phys.isConsistent ? "通过 ✔" : "未通过 ✘"));
+  }
+  return {
+    ok: true,
+    frames: posPx.length,
+    trackCount: tracks.length,
+    pointCount: best.track.length,
+    quality: best.analysis.quality,
+    peakKmh: speed ? speed.peakKmh : null,
+    truthKmh: truthKmh,
+    averageKmh: speed ? speed.averageKmh : null,
+    smoothedPeakKmh: speed ? speed.smoothedPeakKmh : null,
+    dragCoeffK: phys ? phys.dragCoeffK : null,
+    r2: phys ? phys.r2 : null,
+    isConsistent: phys ? phys.isConsistent : false,
+    radarEquivalentKmh: phys ? phys.radarEquivalentKmh : null
+  };
+};
+</script>
+
+<!-- ============================================================
+     脚本区 3：界面逻辑（视频抽帧、标定、后台分析、结果绘制、CSV 导出）
+     ============================================================ -->
+<script>
+"use strict";
+(function () {
+  // ---- DOM ----
+  const $ = function (id) { return document.getElementById(id); };
+  const video = $("videoProxy");
+  const fileInput = $("fileInput");
+  const videoInfo = $("videoInfo");
+  const presetSelect = $("presetSelect");
+  const calCanvas = $("calCanvas");
+  const calInfo = $("calInfo");
+  const clearCalBtn = $("clearCalBtn");
+  const fpsInput = $("fpsInput");
+  const maxFramesInput = $("maxFramesInput");
+  const detectFpsBtn = $("detectFpsBtn");
+  const startBtn = $("startBtn");
+  const cancelBtn = $("cancelBtn");
+  const progressBar = $("progressBar");
+  const statusText = $("statusText");
+  const resultCanvas = $("resultCanvas");
+  const statsGrid = $("statsGrid");
+  const physicsBox = $("physicsBox");
+  const chartCanvas = $("chartCanvas");
+  const csvBtn = $("csvBtn");
+  const resetPtsBtn = $("resetPtsBtn");
+  const selftestBtn = $("selftestBtn");
+  const selftestLog = $("selftestLog");
+
+  // ---- 状态 ----
+  const state = {
+    loaded: false,
+    objectURL: null,
+    videoW: 0, videoH: 0,
+    firstFrameCanvas: null,
+    calPoints: [],          // 原始分辨率像素坐标
+    analyzing: false,
+    cancelRequested: false,
+    tracks: [],
+    best: null,             // { track, analysis }
+    analysis: null,         // 当前（可能已剔除后）的分析结果
+    excluded: new Set(),    // best.track 中被剔除的索引
+    measuredPairs: []
+  };
+
+  // ---- 预设下拉框 ----
+  for (let i = 0; i < COURT_PRESETS.length; i++) {
+    const opt = document.createElement("option");
+    opt.value = String(COURT_PRESETS[i].meters);
+    opt.textContent = COURT_PRESETS[i].name;
+    presetSelect.appendChild(opt);
+  }
+
+  function setStatus(msg) { statusText.textContent = msg; }
+
+  // ---- 通用 seek：等待 seeked 事件（带超时保护）----
+  function seekTo(t) {
+    return new Promise(function (resolve) {
+      let done = false;
+      const finish = function () {
+        if (done) return;
+        done = true;
+        video.removeEventListener("seeked", onSeeked);
+        resolve();
+      };
+      const onSeeked = function () { finish(); };
+      video.addEventListener("seeked", onSeeked);
+      const target = Math.min(t, Math.max(0, (video.duration || 0) - 1e-4));
+      try {
+        if (Math.abs(video.currentTime - target) < 1e-6) { finish(); return; }
+        video.currentTime = target;
+      } catch (e) { finish(); return; }
+      setTimeout(finish, 2500);
+    });
+  }
+
+  // ---- 视频加载与首帧 ----
+  fileInput.addEventListener("change", function () {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    if (state.objectURL) URL.revokeObjectURL(state.objectURL);
+    state.objectURL = URL.createObjectURL(f);
+    state.loaded = false;
+    state.calPoints = [];
+    state.tracks = [];
+    state.best = null;
+    state.analysis = null;
+    state.excluded.clear();
+    video.src = state.objectURL;
+    videoInfo.textContent = "正在加载视频: " + f.name + " …";
+    setStatus("视频加载中……");
+  });
+
+  video.addEventListener("loadeddata", async function () {
+    state.videoW = video.videoWidth;
+    state.videoH = video.videoHeight;
+    videoInfo.textContent = "已加载: " + state.videoW + "×" + state.videoH +
+      " px · 时长 " + (video.duration || 0).toFixed(2) + " s";
+    await seekTo(0);
+    // 抓取首帧（原始分辨率）
+    const fc = document.createElement("canvas");
+    fc.width = state.videoW; fc.height = state.videoH;
+    fc.getContext("2d").drawImage(video, 0, 0);
+    state.firstFrameCanvas = fc;
+    state.loaded = true;
+    startBtn.disabled = false;
+    drawCalibration();
+    setStatus("已就绪。请先在上方首帧中标定场地线段（可选但建议），再开始分析。");
+  });
+
+  video.addEventListener("error", function () {
+    videoInfo.textContent = "视频解码失败：浏览器不支持该格式/编码，请改用 H.264 编码的 mp4。";
+  });
+
+  // ---- 标定 ----
+  function currentPresetMeters() {
+    return parseFloat(presetSelect.value) || COURT_PRESETS[0].meters;
+  }
+  function currentCalibration() {
+    if (state.calPoints.length < 2) return null;
+    return makeScaleCalibration(state.calPoints[0], state.calPoints[1], currentPresetMeters());
+  }
+  function drawCalibration() {
+    const c = calCanvas;
+    if (!state.loaded) {
+      c.width = 960; c.height = 540;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#000"; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.fillStyle = "#8b949e";
+      ctx.font = "20px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("加载视频后在此显示首帧", c.width / 2, c.height / 2);
+      return;
+    }
+    c.width = state.videoW; c.height = state.videoH;
+    const ctx = c.getContext("2d");
+    ctx.drawImage(state.firstFrameCanvas, 0, 0);
+    const s = Math.max(1, c.width / 900);
+    // 标定点与连线
+    if (state.calPoints.length >= 1) {
+      const a = state.calPoints[0];
+      ctx.fillStyle = "#58a6ff";
+      ctx.beginPath(); ctx.arc(a.x, a.y, 5 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#e6edf3"; ctx.font = (12 * s) + "px sans-serif";
+      ctx.fillText("A", a.x + 8 * s, a.y - 8 * s);
+    }
+    if (state.calPoints.length >= 2) {
+      const b = state.calPoints[1];
+      ctx.strokeStyle = "#d29922"; ctx.lineWidth = 2 * s; ctx.setLineDash([8 * s, 6 * s]);
+      ctx.beginPath(); ctx.moveTo(state.calPoints[0].x, state.calPoints[0].y);
+      ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = "#58a6ff";
+      ctx.beginPath(); ctx.arc(b.x, b.y, 5 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#e6edf3"; ctx.font = (12 * s) + "px sans-serif";
+      ctx.fillText("B", b.x + 8 * s, b.y - 8 * s);
+    }
+  }
+  calCanvas.addEventListener("click", function (e) {
+    if (!state.loaded) return;
+    const rect = calCanvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (calCanvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (calCanvas.height / rect.height);
+    if (state.calPoints.length >= 2) state.calPoints = [];
+    state.calPoints.push({ x: x, y: y });
+    updateCalInfo();
+    drawCalibration();
+  });
+  function updateCalInfo() {
+    const cal = currentCalibration();
+    if (!cal) {
+      calInfo.textContent = "尚未选取标定点（" + state.calPoints.length + "/2）——未标定时仍可分析轨迹，但无法换算绝对速度。";
+      return;
+    }
+    const dpx = Math.hypot(cal.pixelB.x - cal.pixelA.x, cal.pixelB.y - cal.pixelA.y);
+    const sc = cal.scale;
+    calInfo.textContent = "标定完成: 线段 " + dpx.toFixed(1) + " px = " +
+      cal.realDistanceMeters.toFixed(2) + " m → 比例尺 1 px = " + (sc * 100).toFixed(2) +
+      " cm" + (cal.isValid ? "" : "（警告: 比例尺异常，请检查选取的线段）");
+  }
+  presetSelect.addEventListener("change", function () { updateCalInfo(); drawCalibration(); });
+  clearCalBtn.addEventListener("click", function () {
+    state.calPoints = [];
+    updateCalInfo();
+    drawCalibration();
+  });
+
+  // ---- 帧率自动检测（requestVideoFrameCallback，可选）----
+  detectFpsBtn.addEventListener("click", async function () {
+    if (!state.loaded) { setStatus("请先加载视频"); return; }
+    if (!("requestVideoFrameCallback" in HTMLVideoElement.prototype)) {
+      setStatus("当前浏览器不支持 requestVideoFrameCallback，请按相机设置手动填写帧率。");
+      return;
+    }
+    setStatus("正在检测帧率……");
+    try {
+      video.pause();
+      await seekTo(Math.min(0.05, (video.duration || 1) * 0.01));
+      const deltas = [];
+      let last = null;
+      await new Promise(function (resolve) {
+        let stopped = false;
+        const cb = function (now, meta) {
+          if (last !== null && meta.mediaTime - last > 0.0001) deltas.push(meta.mediaTime - last);
+          last = meta.mediaTime;
+          if (stopped || deltas.length >= 24) return resolve();
+          video.requestVideoFrameCallback(cb);
+        };
+        video.requestVideoFrameCallback(cb);
+        setTimeout(function () { stopped = true; resolve(); }, 2000);
+      });
+      video.pause();
+      await seekTo(0);
+      if (deltas.length === 0) { setStatus("未能检测到帧率，请手动填写。"); return; }
+      deltas.sort(function (a, b) { return a - b; });
+      const med = deltas[Math.floor(deltas.length / 2)];
+      let fps = 1 / med;
+      const common = [24, 25, 30, 48, 50, 60, 90, 100, 120, 180, 240, 480];
+      for (let i = 0; i < common.length; i++) {
+        if (Math.abs(fps - common[i]) < common[i] * 0.04) { fps = common[i]; break; }
+      }
+      fpsInput.value = String(Math.round(fps));
+      setStatus("已检测视频帧率 ≈ " + fpsInput.value + " fps。");
+    } catch (err) {
+      setStatus("帧率检测失败: " + (err && err.message ? err.message : err) + "，请手动填写。");
+    }
+  });
+
+  // ---- 帧抽取（灰度降采样，对应 GrayscaleConverter.swift：最长边 ≤ 960）----
+  function makeWorkCanvas(dw, dh) {
+    const c = document.createElement("canvas");
+    c.width = dw; c.height = dh;
+    return c;
+  }
+  function grabGray(workCanvas, dw, dh) {
+    const ctx = workCanvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0, dw, dh);
+    const data = ctx.getImageData(0, 0, dw, dh).data;
+    const px = new Uint8Array(dw * dh);
+    for (let i = 0, j = 0; i < px.length; i++, j += 4) {
+      // RGBA → 灰度，系数与 Swift (77r + 151g + 28b) >> 8 一致
+      px[i] = (77 * data[j] + 151 * data[j + 1] + 28 * data[j + 2]) >> 8;
+    }
+    return { width: dw, height: dh, pixels: px };
+  }
+
+  // ---- 后台顺序分析（分批让出主线程）----
+  const yieldToUI = function () { return new Promise(function (r) { setTimeout(r, 0); }); };
+
+  async function runAnalysis() {
+    if (!state.loaded || state.analyzing) return;
+    const fps = parseFloat(fpsInput.value);
+    const maxFrames = parseInt(maxFramesInput.value, 10);
+    if (!(fps > 0) || !(maxFrames > 0)) { setStatus("请填写有效的帧率与最大帧数。"); return; }
+    const useCal = currentCalibration();
+
+    state.analyzing = true;
+    state.cancelRequested = false;
+    state.tracks = [];
+    state.best = null;
+    state.analysis = null;
+    state.excluded.clear();
+    startBtn.disabled = true;
+    cancelBtn.disabled = false;
+    csvBtn.disabled = true;
+    resetPtsBtn.disabled = true;
+    video.pause();
+
+    try {
+      const vw = state.videoW, vh = state.videoH;
+      const step = Math.max(1, Math.ceil(Math.max(vw, vh) / 960));
+      const dw = Math.floor(vw / step), dh = Math.floor(vh / step);
+      const work = makeWorkCanvas(dw, dh);
+      const processor = new FrameProcessor(new ClassicalMotionDetector());
+      const duration = video.duration || 0;
+      let processed = 0;
+
+      for (let i = 0; i < maxFrames; i++) {
+        const t = i / fps;
+        if (t > duration) break;
+        await seekTo(t);
+        if (state.cancelRequested) break;
+        const gray = grabGray(work, dw, dh);
+        processor.process(gray, t, step, vw, useCal);
+        processed = i + 1;
+        const prog = duration > 0 ? Math.min(1, t / duration) : 0;
+        progressBar.style.width = (prog * 100).toFixed(1) + "%";
+        setStatus("分析中… 帧 " + processed + " · t=" + t.toFixed(3) + " s · 候选轨迹 " +
+                  processor.tracks.length + " 段");
+        await yieldToUI();
+      }
+      const tracks = processor.finish();
+      state.tracks = tracks;
+
+      progressBar.style.width = "100%";
+      if (tracks.length === 0) {
+        setStatus("未检测到有效轨迹。请确认: 三脚架固定机位、球在画面内且对比度足够、" +
+                  "帧率填写正确、标定比例合理（速度需落在 5~375 km/h）。");
+        renderResults();
+      } else {
+        const best = AnalysisPipeline.bestAnalysis(tracks, vw, useCal);
+        state.best = best;
+        const counts = tracks.map(function (t) { return t.length; }).join(" / ");
+        if (!best) {
+          setStatus("检测到 " + tracks.length + " 段候选轨迹（点数: " + counts +
+                    "），但点数均不足 6 或质量不足。建议降低阈值干扰、检查标定或换更清晰的片段。");
+        } else {
+          setStatus("完成: 处理 " + processed + " 帧，" + tracks.length + " 段候选轨迹（点数: " +
+                    counts + "），已择优。点击轨迹附近的实测点可剔除异常并重算。");
+        }
+        renderResults();
+      }
+    } catch (err) {
+      setStatus("分析出错: " + (err && err.message ? err.message : err));
+    } finally {
+      state.analyzing = false;
+      startBtn.disabled = !state.loaded;
+      cancelBtn.disabled = true;
+    }
+  }
+  startBtn.addEventListener("click", runAnalysis);
+  cancelBtn.addEventListener("click", function () {
+    state.cancelRequested = true;
+    setStatus("正在取消……");
+  });
+
+  // ---- 结果渲染 ----
+  function speedColor(t) {
+    // 蓝慢 → 红快
+    t = Math.max(0, Math.min(1, t));
+    const hue = 215 - 215 * t;
+    return "hsl(" + hue.toFixed(0) + ", 85%, 55%)";
+  }
+
+  function renderResults() {
+    if (state.best && !state.analysis) state.analysis = state.best.analysis;
+    if (state.analysis) rebuildMeasuredPairs();
+    csvBtn.disabled = !state.analysis;
+    resetPtsBtn.disabled = !state.best;
+    drawResultOverlay();
+    drawChart();
+    updateStats();
+  }
+
+  function drawResultOverlay() {
+    const c = resultCanvas;
+    const ctx = c.getContext("2d");
+    if (!state.best) {
+      c.width = 960; c.height = 540;
+      ctx.fillStyle = "#0a0e14"; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.fillStyle = "#8b949e"; ctx.font = "20px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("完成分析后在此显示轨迹叠加", c.width / 2, c.height / 2);
+      return;
+    }
+    c.width = state.videoW; c.height = state.videoH;
+    ctx.drawImage(state.firstFrameCanvas, 0, 0);
+    ctx.fillStyle = "rgba(8,10,14,0.38)";
+    ctx.fillRect(0, 0, c.width, c.height);
+    const s = Math.max(1, c.width / 900);
+
+    // 标定线段
+    const cal = currentCalibration();
+    if (cal) {
+      ctx.strokeStyle = "#d29922"; ctx.lineWidth = 2 * s; ctx.setLineDash([8 * s, 6 * s]);
+      ctx.beginPath();
+      ctx.moveTo(cal.pixelA.x, cal.pixelA.y);
+      ctx.lineTo(cal.pixelB.x, cal.pixelB.y);
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    const pts = state.analysis.rectified;
+    const speed = state.analysis.speed;
+    let peak = speed ? speed.peakKmh : 1;
+    if (!(peak > 0)) peak = 1;
+    const segByIndex = {};
+    if (speed) for (let i = 0; i < speed.segments.length; i++) segByIndex[speed.segments[i].index] = speed.segments[i];
+
+    // 速度渐变线段
+    ctx.lineCap = "round";
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const seg = segByIndex[i];
+      ctx.strokeStyle = seg ? speedColor(seg.speedKmh / peak) : "#58a6ff";
+      ctx.lineWidth = Math.max(2, 2.5 * s);
+      ctx.beginPath();
+      ctx.moveTo(pts[i].center.x, pts[i].center.y);
+      ctx.lineTo(pts[i + 1].center.x, pts[i + 1].center.y);
+      ctx.stroke();
+    }
+    // 插值点（灰）
+    for (let i = 0; i < pts.length; i++) {
+      if (!pts[i].isInterpolated) continue;
+      ctx.fillStyle = "#9ca3af";
+      ctx.beginPath(); ctx.arc(pts[i].center.x, pts[i].center.y, 3 * s, 0, Math.PI * 2); ctx.fill();
+    }
+    // 实测点（绿）/ 被剔除点（红 X，取自原始轨迹）
+    for (let i = 0; i < pts.length; i++) {
+      if (pts[i].isInterpolated) continue;
+      ctx.fillStyle = "#22c55e";
+      ctx.beginPath(); ctx.arc(pts[i].center.x, pts[i].center.y, 4 * s, 0, Math.PI * 2); ctx.fill();
+    }
+    for (let i = 0; i < state.best.track.length; i++) {
+      if (!state.excluded.has(i)) continue;
+      const p = state.best.track[i].center;
+      ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2.5 * s;
+      ctx.beginPath();
+      ctx.moveTo(p.x - 5 * s, p.y - 5 * s); ctx.lineTo(p.x + 5 * s, p.y + 5 * s);
+      ctx.moveTo(p.x + 5 * s, p.y - 5 * s); ctx.lineTo(p.x - 5 * s, p.y + 5 * s);
+      ctx.stroke();
+    }
+    // 峰值段标注
+    if (speed) {
+      const ps = speed.segments[speed.peakSegmentIndex];
+      const a = pts[ps.index].center, b = pts[ps.index + 1].center;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      ctx.strokeStyle = "#d29922"; ctx.lineWidth = 2 * s;
+      ctx.beginPath(); ctx.arc(mx, my, 11 * s, 0, Math.PI * 2); ctx.stroke();
+      ctx.font = "bold " + (14 * s) + "px sans-serif";
+      ctx.fillStyle = "#d29922"; ctx.textAlign = "left";
+      ctx.fillText("峰值 " + speed.peakKmh.toFixed(1) + " km/h", mx + 14 * s, my - 10 * s);
+    }
+  }
+
+  function rebuildMeasuredPairs() {
+    // 与 PhysicsValidator.validate 内部完全一致的实测对序列（用于可疑段定位展示）
+    const pairs = [];
+    const pts = state.analysis.rectified;
+    const cal = currentCalibration();
+    const scale = cal ? cal.scale : 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      if (a.isInterpolated || b.isInterpolated) continue;
+      const d = Math.hypot(b.center.x - a.center.x, b.center.y - a.center.y);
+      const dtp = b.time - a.time;
+      if (!(dtp > 0) || !(d > 0)) continue;
+      pairs.push({ a: a, b: b, v: d / dtp * scale });
+    }
+    state.measuredPairs = pairs;
+    return pairs;
+  }
+
+  function drawChart() {
+    const c = chartCanvas;
+    c.width = 900; c.height = 340;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#1c2330"; ctx.fillRect(0, 0, c.width, c.height);
+    if (!state.analysis || !state.analysis.speed) {
+      ctx.fillStyle = "#8b949e"; ctx.font = "16px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(state.analysis ? "需要标定才能绘制速度-时间曲线" : "完成分析后在此显示速度-时间曲线",
+                   c.width / 2, c.height / 2);
+      return;
+    }
+    const segs = state.analysis.speed.segments;
+    const peak = state.analysis.speed.peakKmh;
+    const pairs = state.measuredPairs;
+    const L = 62, R = 18, T = 20, B = 42;
+    const plotW = c.width - L - R, plotH = c.height - T - B;
+    const t0 = segs[0].t0, t1 = segs[segs.length - 1].t1;
+    const tSpan = Math.max(t1 - t0, 1e-6);
+    const yMax = Math.max(peak * 1.18, 1);
+    const X = function (t) { return L + (t - t0) / tSpan * plotW; };
+    const Y = function (v) { return T + (1 - v / yMax) * plotH; };
+
+    // 网格与坐标
+    ctx.strokeStyle = "#2a3140"; ctx.lineWidth = 1;
+    ctx.fillStyle = "#8b949e"; ctx.font = "11px sans-serif"; ctx.textAlign = "right";
+    for (let g = 0; g <= 5; g++) {
+      const v = yMax * g / 5;
+      const y = Y(v);
+      ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(c.width - R, y); ctx.stroke();
+      ctx.fillText(v.toFixed(0), L - 6, y + 4);
+    }
+    ctx.textAlign = "center";
+    for (let g = 0; g <= 5; g++) {
+      const t = t0 + tSpan * g / 5;
+      const x = X(t);
+      ctx.fillText(t.toFixed(2) + "s", x, c.height - B + 16);
+    }
+    ctx.fillText("时间 (s)", L + plotW / 2, c.height - 6);
+    ctx.save();
+    ctx.translate(14, T + plotH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText("速度", 0, 0);
+    ctx.restore();
+
+    // 误差棒（不确定度）
+    ctx.strokeStyle = "rgba(230,237,243,0.28)";
+    for (let i = 0; i < segs.length; i++) {
+      const sg = segs[i];
+      const x = X((sg.t0 + sg.t1) / 2);
+      const y1 = Y(sg.speedKmh + sg.uncertaintyKmh), y2 = Y(sg.speedKmh - sg.uncertaintyKmh);
+      ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y2); ctx.stroke();
+    }
+    // 可疑段（红圈）
+    if (state.analysis.physics) {
+      const susp = state.analysis.physics.suspiciousSegments;
+      for (let i = 0; i < susp.length; i++) {
+        const pr = pairs[susp[i]];
+        if (!pr) continue;
+        const x = X((pr.a.time + pr.b.time) / 2), y = Y(pr.v * 3.6);
+        ctx.strokeStyle = "#f85149"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    // 速度折线（渐变色分段）
+    for (let i = 0; i < segs.length; i++) {
+      const sg = segs[i];
+      const x1 = X(sg.t0), y1 = Y(sg.speedKmh);
+      const x2 = X(sg.t1), y2 = Y(sg.speedKmh);
+      ctx.strokeStyle = speedColor(sg.speedKmh / Math.max(peak, 1));
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.beginPath(); ctx.arc((x1 + x2) / 2, y1, 2.6, 0, Math.PI * 2); ctx.fill();
+    }
+    // 峰值
+    const ps = segs[state.analysis.speed.peakSegmentIndex];
+    const px2 = X((ps.t0 + ps.t1) / 2), py2 = Y(ps.speedKmh);
+    ctx.fillStyle = "#d29922";
+    ctx.beginPath(); ctx.arc(px2, py2, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.font = "bold 12px sans-serif"; ctx.textAlign = "left";
+    ctx.fillStyle = "#d29922";
+    ctx.fillText("峰值 " + ps.speedKmh.toFixed(1) + " km/h", Math.min(px2 + 8, c.width - 130), py2 - 8);
+  }
+
+  function updateStats() {
+    if (!state.best || !state.analysis) {
+      statsGrid.innerHTML = "";
+      physicsBox.innerHTML = "";
+      return;
+    }
+    const a = state.analysis;
+    const speed = a.speed, phys = a.physics;
+    const cal = currentCalibration();
+    const qualityText = { good: "优", fair: "参考", insufficient: "不足" }[a.quality] || a.quality;
+    const qualityCls = { good: "good", fair: "warn", insufficient: "bad" }[a.quality] || "";
+    let html = "";
+    if (speed) {
+      html += stat("峰值速度", speed.peakKmh.toFixed(1), " km/h ±" + speed.peakUncertaintyKmh.toFixed(1), "good");
+      html += stat("平滑峰值（3 段中值）", speed.smoothedPeakKmh.toFixed(1), " km/h");
+      html += stat("平均速度", speed.averageKmh.toFixed(1), " km/h");
+    } else {
+      html += stat("峰值速度", "—", "（未标定，无法测速）");
+    }
+    html += stat("雷达枪等效 (4m)", phys && phys.radarEquivalentKmh !== null ? phys.radarEquivalentKmh.toFixed(1) : "—", " km/h");
+    html += stat("轨迹点数", String(a.rectified.length), "（实测 " +
+      a.rectified.filter(function (p) { return !p.isInterpolated; }).length + "）");
+    html += stat("轨迹质量", qualityText, "", qualityCls);
+    statsGrid.innerHTML = html;
+
+    let ph = '<div class="line"><span class="k">物理自洽校验（空气阻力模型）</span><span>' +
+      (phys ? (phys.isConsistent ? '<span class="badge ok">通过</span>' : '<span class="badge no">未通过</span>')
+            : '<span class="badge mid">无数据</span>') + '</span></div>';
+    if (phys) {
+      ph += line("气动系数 k̂", phys.dragCoeffK.toFixed(3) + " /m（合理区间 0.02 ~ 0.60）");
+      ph += line("拟合优度 R²", phys.r2.toFixed(4) + "（阈值 ≥ 0.85）");
+      ph += line("最大相对偏差", (phys.maxRelDeviation * 100).toFixed(1) + "%（阈值 ≤ 35%）");
+      ph += line("参与验证的实测段", String(phys.segmentCount) + " 段");
+      if (phys.suspiciousSegments.length > 0) {
+        const items = phys.suspiciousSegments.map(function (i) {
+          const pr = state.measuredPairs[i];
+          if (!pr) return "#" + i;
+          return "#" + i + "（t≈" + pr.a.time.toFixed(3) + "s, v≈" + (pr.v * 3.6).toFixed(1) + " km/h）";
+        }).join("、");
+        ph += line("可疑帧段", items + " —— 点击轨迹上对应实测点剔除后自动重算");
+      } else {
+        ph += line("可疑帧段", "无");
+      }
+    } else if (cal) {
+      ph += line("说明", "实测段不足（需 ≥ 4 段），无法进行物理验证");
+    } else {
+      ph += line("说明", "未标定：请先在首帧上选取场地线段");
+    }
+    physicsBox.innerHTML = ph;
+
+    function stat(k, v, unit, cls) {
+      return '<div class="stat"><div class="k">' + k + '</div><div class="v ' + (cls || "") + '">' + v +
+        (unit ? ' <small>' + unit + '</small>' : '') + '</div></div>';
+    }
+    function line(k, v) {
+      return '<div class="line"><span class="k">' + k + '</span><span>' + v + '</span></div>';
+    }
+  }
+
+  // ---- 点击轨迹剔除/恢复异常点并重算 ----
+  resultCanvas.addEventListener("click", function (e) {
+    if (!state.best) return;
+    const rect = resultCanvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (resultCanvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (resultCanvas.height / rect.height);
+    const threshold = Math.max(14, resultCanvas.width / 60);
+    let hit = -1, hitDist = Infinity;
+    for (let i = 0; i < state.best.track.length; i++) {
+      const c = state.best.track[i].center;
+      const d = Math.hypot(c.x - x, c.y - y);
+      if (d < hitDist) { hitDist = d; hit = i; }
+    }
+    if (hit < 0 || hitDist > threshold) return;
+    if (state.excluded.has(hit)) state.excluded.delete(hit);
+    else {
+      if (state.best.track.length - state.excluded.size <= 2) {
+        setStatus("至少需要保留 2 个实测点。");
+        return;
+      }
+      state.excluded.add(hit);
+    }
+    recompute();
+  });
+  resultCanvas.addEventListener("mousemove", function (e) {
+    if (!state.best) return;
+    const rect = resultCanvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (resultCanvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (resultCanvas.height / rect.height);
+    const threshold = Math.max(14, resultCanvas.width / 60);
+    let near = false;
+    for (let i = 0; i < state.best.track.length; i++) {
+      const c = state.best.track[i].center;
+      if (Math.hypot(c.x - x, c.y - y) <= threshold) { near = true; break; }
+    }
+    resultCanvas.style.cursor = near ? "pointer" : "crosshair";
+  });
+  resetPtsBtn.addEventListener("click", function () {
+    state.excluded.clear();
+    recompute();
+  });
+
+  function recompute() {
+    if (!state.best) return;
+    const filtered = state.best.track.filter(function (_, i) { return !state.excluded.has(i); });
+    const cal = currentCalibration();
+    state.analysis = AnalysisPipeline.analyze(filtered, state.videoW, cal);
+    rebuildMeasuredPairs();
+    renderResults();
+    setStatus("已按 " + filtered.length + " 个实测点重算（剔除 " + state.excluded.size + " 个）。");
+  }
+
+  // ---- CSV 导出（时间、x、y、速度、是否插值）----
+  csvBtn.addEventListener("click", function () {
+    if (!state.analysis) return;
+    const pts = state.analysis.rectified;
+    const segs = state.analysis.speed ? state.analysis.speed.segments : null;
+    const rows = [["时间", "x", "y", "速度", "是否插值"]];
+    for (let j = 0; j < pts.length; j++) {
+      let speedTxt = "";
+      if (segs && segs.length > 0) {
+        const si = (j === 0) ? 0 : j - 1;
+        const seg = segs[Math.min(si, segs.length - 1)];
+        if (seg) speedTxt = seg.speedKmh.toFixed(2);
+      }
+      rows.push([
+        pts[j].time.toFixed(4),
+        pts[j].center.x.toFixed(2),
+        pts[j].center.y.toFixed(2),
+        speedTxt,
+        pts[j].isInterpolated ? "是" : "否"
+      ]);
+    }
+    const csv = "\uFEFF" + rows.map(function (r) { return r.join(","); }).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "shuttleeye_" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+  });
+
+  // ---- 自检按钮 ----
+  selftestBtn.addEventListener("click", function () {
+    const t0 = performance.now();
+    const r = window.__selftest();
+    const ms = (performance.now() - t0).toFixed(0);
+    selftestLog.hidden = false;
+    if (r && r.ok) {
+      selftestLog.textContent =
+        "自检通过（" + ms + " ms）\n" +
+        "合成: v0=" + r.truthKmh.toFixed(0) + " km/h, " + r.frames + " 帧\n" +
+        "跟踪: " + r.trackCount + " 段候选, 最佳 " + r.pointCount + " 点（质量 " + r.quality + "）\n" +
+        "峰值速度: " + (r.peakKmh === null ? "—" : r.peakKmh.toFixed(1) + " km/h（真值 " + r.truthKmh.toFixed(1) + "）") + "\n" +
+        "平均速度: " + (r.averageKmh === null ? "—" : r.averageKmh.toFixed(1) + " km/h") + "\n" +
+        "气动系数 k: " + (r.dragCoeffK === null ? "—" : r.dragCoeffK.toFixed(3) + " /m") + "\n" +
+        "物理验证 R²: " + (r.r2 === null ? "—" : r.r2.toFixed(4)) + "\n" +
+        "物理自洽: " + (r.isConsistent ? "通过" : "未通过") + "\n" +
+        "详细输出见浏览器控制台（F12）";
+    } else {
+      selftestLog.textContent = "自检失败，详见控制台（F12）。";
+    }
+  });
+
+  // ---- 初始占位绘制 ----
+  drawCalibration();
+  drawResultOverlay();
+  drawChart();
+})();
+</script>
+</body>
+</html>
