@@ -1,0 +1,16 @@
+# XcodeGen 生成物
+*.xcodeproj
+**/*.xcodeproj
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
+.DS_Store
+
+# SwiftPM
+.build/
+.swiftpm/
+
+# CoreML 编译产物（源 .mlmodel 请放入 App/Models）
+*.mlmodelc/

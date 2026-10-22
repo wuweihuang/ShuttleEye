@@ -1,0 +1,58 @@
+name: ShuttleEye
+options:
+  bundleIdPrefix: com.badmon
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  developmentLanguage: zh-Hans
+
+packages:
+  ShuttleEyeCore:
+    path: .
+
+targets:
+  ShuttleEye:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: ShuttleEyeCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: 羽眼 ShuttleEye
+        NSCameraUsageDescription: 需要使用相机进行高速摄像（120/240fps），以捕捉羽毛球飞行轨迹并测量球速。
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: true
+    settings:
+      base:
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+
+  ShuttleEyeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: ShuttleEye
+      - package: ShuttleEyeCore
+
+schemes:
+  ShuttleEye:
+    build:
+      targets:
+        ShuttleEye: all
+        ShuttleEyeTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - ShuttleEyeTests
